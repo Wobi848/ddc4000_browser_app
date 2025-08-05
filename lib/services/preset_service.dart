@@ -19,6 +19,18 @@ class PresetService {
         print('   - Getting SharedPreferences instance...');
         _prefs = await SharedPreferences.getInstance();
         print('   - SharedPreferences initialized successfully');
+        
+        // Test basic functionality
+        print('   - Testing SharedPreferences write/read...');
+        await _prefs!.setString('test_key', 'test_value');
+        final testValue = _prefs!.getString('test_key');
+        print('   - Test write/read result: $testValue');
+        
+        if (testValue == 'test_value') {
+          print('   - ✅ SharedPreferences is working correctly');
+        } else {
+          print('   - ❌ SharedPreferences test failed!');
+        }
       } else {
         print('   - SharedPreferences already initialized');
       }
@@ -30,51 +42,115 @@ class PresetService {
   }
 
   Future<List<DDCPreset>> getAllPresets() async {
-    await init();
-    final presetsJson = _prefs!.getStringList(_presetsKey) ?? [];
-    
-    return presetsJson
-        .map((json) => DDCPreset.fromJson(jsonDecode(json)))
-        .toList()
-      ..sort((a, b) => b.lastUsed?.compareTo(a.lastUsed ?? DateTime(1970)) ?? 0);
+    try {
+      print('📖 SIMPLE getAllPresets() called');
+      await init();
+      
+      // Get simple preset list
+      final presetNames = _prefs!.getStringList('simple_preset_list') ?? [];
+      print('   Found ${presetNames.length} simple presets in storage');
+      
+      if (presetNames.isEmpty) {
+        print('   No simple presets found, returning empty list');
+        return [];
+      }
+      
+      final presets = <DDCPreset>[];
+      for (final name in presetNames) {
+        try {
+          final presetKey = 'simple_preset_$name';
+          final presetData = _prefs!.getString(presetKey);
+          
+          if (presetData != null) {
+            final parts = presetData.split('|');
+            if (parts.length >= 3) {
+              final preset = DDCPreset(
+                name: name,
+                protocol: parts[0],
+                ip: parts[1],
+                resolution: parts[2],
+                createdAt: parts.length > 3 
+                  ? DateTime.fromMillisecondsSinceEpoch(int.tryParse(parts[3]) ?? 0)
+                  : DateTime.now(),
+              );
+              presets.add(preset);
+              print('   ✅ Successfully loaded simple preset: $name');
+            }
+          }
+        } catch (e) {
+          print('   ❌ Error loading preset $name: $e');
+          // Skip malformed preset
+        }
+      }
+      
+      print('   Returning ${presets.length} valid simple presets');
+      return presets;
+      
+    } catch (e, stackTrace) {
+      print('❌ Error in getAllPresets: $e');
+      print('   Stack trace: $stackTrace');
+      return []; // Return empty list on error
+    }
   }
 
   Future<void> savePreset(DDCPreset preset) async {
-    print('📋 PresetService.savePreset() called');
+    print('📋 SIMPLE PresetService.savePreset() called');
     print('   Preset name: ${preset.name}');
     print('   Preset IP: ${preset.ip}');
     
-    await init();
-    print('   SharedPreferences initialized');
-    
-    final presets = await getAllPresets();
-    print('   Current presets count: ${presets.length}');
-    
-    // Remove existing preset with same name or IP
-    final removedCount = presets.length;
-    presets.removeWhere((p) => p.name == preset.name || 
-                             (p.ip == preset.ip && p.protocol == preset.protocol));
-    print('   Removed ${removedCount - presets.length} duplicate presets');
-    
-    // Add new preset
-    presets.insert(0, preset);
-    print('   Added new preset, total count: ${presets.length}');
-    
-    // Keep only last 20 presets
-    if (presets.length > 20) {
-      presets.removeRange(20, presets.length);
-      print('   Trimmed to 20 presets');
+    try {
+      await init();
+      print('   SharedPreferences initialized');
+      
+      // SIMPLE APPROACH: Save individual preset data directly
+      final presetKey = 'simple_preset_${preset.name}';
+      final presetData = '${preset.protocol}|${preset.ip}|${preset.resolution}|${DateTime.now().millisecondsSinceEpoch}';
+      
+      print('   Saving preset data: $presetData');
+      await _prefs!.setString(presetKey, presetData);
+      
+      // Verify it was saved
+      final saved = _prefs!.getString(presetKey);
+      print('   Verification read: $saved');
+      
+      if (saved == presetData) {
+        // Add to preset list
+        final presetList = _prefs!.getStringList('simple_preset_list') ?? [];
+        if (!presetList.contains(preset.name)) {
+          presetList.insert(0, preset.name);
+          await _prefs!.setStringList('simple_preset_list', presetList);
+          print('   Added to preset list, total presets: ${presetList.length}');
+        }
+        print('✅ SIMPLE preset saved successfully');
+      } else {
+        throw Exception('Preset save verification failed');
+      }
+      
+    } catch (e, stackTrace) {
+      print('❌ DETAILED ERROR in savePreset: $e');
+      print('   Stack trace: $stackTrace');
+      rethrow;
     }
-    
-    await _savePresets(presets);
-    print('✅ Preset saved to SharedPreferences');
   }
 
   Future<void> deletePreset(String name) async {
-    await init();
-    final presets = await getAllPresets();
-    presets.removeWhere((p) => p.name == name);
-    await _savePresets(presets);
+    try {
+      print('🗑️ SIMPLE deletePreset() called: $name');
+      await init();
+      
+      // Remove from preset list
+      final presetList = _prefs!.getStringList('simple_preset_list') ?? [];
+      presetList.remove(name);
+      await _prefs!.setStringList('simple_preset_list', presetList);
+      
+      // Remove preset data
+      final presetKey = 'simple_preset_$name';
+      await _prefs!.remove(presetKey);
+      
+      print('   ✅ Simple preset deleted: $name');
+    } catch (e) {
+      print('   ❌ Error deleting preset: $e');
+    }
   }
 
   Future<void> updateLastUsed(String name) async {

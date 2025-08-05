@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
@@ -5,6 +6,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ddc_preset.dart';
 import '../services/preset_service.dart';
 import '../services/screenshot_service.dart';
@@ -84,6 +86,15 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
             // Apply display optimizations after page loads
             _optimizeDisplayForResolution();
             
+            // Auto-hide instructions after 5 seconds
+            if (_showZoomInstructions) {
+              Timer(const Duration(seconds: 5), () {
+                if (mounted && _showZoomInstructions) {
+                  setState(() => _showZoomInstructions = false);
+                }
+              });
+            }
+            
             setState(() {
               _isLoading = false;
               _isConnected = true;
@@ -120,23 +131,39 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   }
 
   Future<void> _loadAutoPreset() async {
-    print('🔄 Checking for autoload preset...');
-    final autoPresetName = await PresetService.instance.getAutoloadPreset();
-    print('   Autoload preset name: $autoPresetName');
+    print('🔄 Checking for simple auto-load...');
     
-    if (autoPresetName != null) {
-      final preset = await PresetService.instance.getPresetByName(autoPresetName);
-      print('   Found preset: ${preset?.name}');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final autoLoad = prefs.getBool('simple_auto_load') ?? false;
       
-      if (preset != null) {
-        print('✅ Loading autoload preset: ${preset.name}');
-        _loadPreset(preset);
+      if (autoLoad) {
+        final protocol = prefs.getString('auto_protocol') ?? 'http';
+        final ip = prefs.getString('auto_ip') ?? '';
+        final resolution = prefs.getString('auto_resolution') ?? 'WVGA';
+        
+        if (ip.isNotEmpty) {
+          print('✅ Loading simple auto-load: $protocol://$ip ($resolution)');
+          setState(() {
+            _protocol = protocol;
+            _ipAddress = ip;
+            _resolution = resolution;
+          });
+          
+          // Auto-connect after a short delay
+          Future.delayed(const Duration(milliseconds: 1000), () {
+            if (mounted) {
+              _connectToDDC();
+            }
+          });
+        } else {
+          print('❌ Auto-load enabled but no IP saved');
+        }
       } else {
-        print('❌ Autoload preset not found, removing autoload setting');
-        await PresetService.instance.setAutoloadPreset(null);
+        print('ℹ️ Simple auto-load disabled');
       }
-    } else {
-      print('ℹ️ No autoload preset set');
+    } catch (e) {
+      print('❌ Error loading simple auto-load: $e');
     }
   }
 
