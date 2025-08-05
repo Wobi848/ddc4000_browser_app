@@ -119,12 +119,13 @@ class _ScreenshotGalleryScreenState extends State<ScreenshotGalleryScreen> {
             ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _screenshots.isEmpty
-              ? _buildEmptyState()
-              : GridView.builder(
-                  padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _screenshots.isEmpty
+                ? _buildEmptyState()
+                : GridView.builder(
+                    padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     childAspectRatio: 1.2,
@@ -137,6 +138,7 @@ class _ScreenshotGalleryScreenState extends State<ScreenshotGalleryScreen> {
                     return _buildScreenshotCard(screenshot);
                   },
                 ),
+      ),
     );
   }
 

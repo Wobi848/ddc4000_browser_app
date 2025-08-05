@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -31,6 +33,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   
   // UI state
   DDCPreset? _currentPreset;
+  bool _showZoomInstructions = true;
   
   @override
   void initState() {
@@ -58,28 +61,58 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   void _initializeWebView() {
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+      ..enableZoom(true)
+      ..clearCache()
+      ..clearLocalStorage()
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (url) {
+            print('🌐 WebView Page Started: $url');
             setState(() {
               _isLoading = true;
-              _statusMessage = 'Connecting...';
+              _statusMessage = 'Loading: ${Uri.parse(url).host}';
             });
           },
           onPageFinished: (url) {
+            print('✅ WebView Page Finished: $url');
+            
+            // Simple desktop optimization
+            _webViewController.runJavaScript('console.log("DDC4000 page loaded - applying desktop mode");');
+            
+            // Apply display optimizations after page loads
+            _optimizeDisplayForResolution();
+            
             setState(() {
               _isLoading = false;
               _isConnected = true;
-              _statusMessage = 'Connected';
+              _statusMessage = 'Connected to ${Uri.parse(url).host}';
             });
           },
           onWebResourceError: (error) {
+            print('❌ WebView Error: ${error.description}');
+            print('   Error Type: ${error.errorType}');
+            print('   Error Code: ${error.errorCode}');
+            print('   Failed URL: ${error.url}');
             setState(() {
               _isLoading = false;
               _isConnected = false;
-              _statusMessage = 'Connection Failed: ${error.description}';
+              _statusMessage = 'Failed: ${error.description}';
             });
-            _showErrorToast('Failed to load DDC4000 interface: ${error.description}');
+            _showErrorToast('Connection failed: ${error.description}');
+          },
+          onNavigationRequest: (NavigationRequest request) {
+            print('🔄 Navigation Request: ${request.url}');
+            print('   - Is for main frame: ${request.isMainFrame}');
+            return NavigationDecision.navigate;
+          },
+          onHttpError: (HttpResponseError error) {
+            print('🚫 HTTP Error: ${error.response?.statusCode}');
+            print('   - URL: ${error.request?.uri}');
+            print('   - Headers: ${error.response?.headers}');
+          },
+          onUrlChange: (UrlChange change) {
+            print('🔗 URL Changed: ${change.url}');
           },
         ),
       );
@@ -113,21 +146,111 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
       return;
     }
 
-    final url = _buildDDCUrl();
-    print('DDC URL: $url'); // Debug logging
+    // Build base URL first (without timestamp)
+    String baseUrl;
+    if (_resolution == 'QVGA') {
+      baseUrl = '$_protocol://$_ipAddress/ddcdialog.html?useOvl=1&busyReload=1&type=$_resolution&x=0&y=0&fit=1';
+    } else {
+      baseUrl = '$_protocol://$_ipAddress/ddcdialog.html?useOvl=1&busyReload=1&type=$_resolution';
+    }
+    
+    final url = _buildDDCUrl(); // This adds timestamp
+    
+    // COMPREHENSIVE DEBUG LOGGING (matching web prototype format)
+    print('🔗 DDC4000 FLUTTER URL DEBUG:');
+    print('========================================');
+    print('Protocol: $_protocol');
+    print('IP Address: $_ipAddress');
+    print('Resolution: $_resolution');
+    print('Original URL: $baseUrl');
+    print('Final URL with timestamp: $url');
+    print('URL Components:');
+    print('  - Base: $_protocol://$_ipAddress');
+    print('  - Path: /ddcdialog.html');
+    print('  - Parameters: ${_buildUrlParameters()}');
+    print('WebView Configuration:');
+    print('  - User Agent: Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36');
+    print('  - JavaScript Enabled: true');
+    print('  - Cache Cleared: true');
+    print('========================================');
+    
+    // Test basic connectivity first
+    _testConnectivity(url);
+    
     _webViewController.loadRequest(Uri.parse(url));
+    
+    // Show URL in toast for debugging
+    _showSuccessToast('Connecting to: $url');
     
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Connecting to DDC4000...';
+      _statusMessage = 'Connecting to: $_protocol://$_ipAddress';
     });
   }
 
+  Future<void> _testConnectivity(String url) async {
+    print('🔍 Testing connectivity to: $url');
+    try {
+      // This is just for debugging - test if the URL is reachable
+      final uri = Uri.parse(url);
+      print('   - Parsed URI: $uri');
+      print('   - Host: ${uri.host}');
+      print('   - Port: ${uri.port}');
+      print('   - Path: ${uri.path}');
+      print('   - Query: ${uri.query}');
+    } catch (e) {
+      print('❌ URL parsing error: $e');
+    }
+  }
+
+  void _optimizeDisplayForResolution() {
+    print('📱 Applying DESKTOP MODE for DDC4000 with InteractiveViewer');
+    
+    String jsCode = '''
+      setTimeout(function() {
+        console.log('🖥️ SETTING UP DESKTOP DDC4000...');
+        
+        // Remove mobile viewport
+        var viewport = document.querySelector("meta[name=viewport]");
+        if (viewport) viewport.remove();
+        
+        // Force desktop viewport
+        viewport = document.createElement('meta');
+        viewport.name = 'viewport';
+        viewport.content = 'width=1200, initial-scale=1.0, user-scalable=no';
+        document.head.appendChild(viewport);
+        
+        // Set minimum sizes to ensure full interface
+        document.body.style.minWidth = '1200px';
+        document.body.style.minHeight = '800px';
+        document.documentElement.style.minWidth = '1200px';
+        
+        console.log('✅ DESKTOP MODE READY FOR INTERACTIVEVIEWER');
+        
+      }, 200);
+    ''';
+    
+    _webViewController.runJavaScript(jsCode);
+  }
+
   String _buildDDCUrl() {
+    String baseUrl;
     if (_resolution == 'QVGA') {
-      return '$_protocol://$_ipAddress/ddcdialog.html?useOvl=1&busyReload=1&type=$_resolution&x=0&y=0&fit=1';
+      baseUrl = '$_protocol://$_ipAddress/ddcdialog.html?useOvl=1&busyReload=1&type=$_resolution&x=0&y=0&fit=1';
     } else {
-      return '$_protocol://$_ipAddress/ddcdialog.html?useOvl=1&busyReload=1&type=$_resolution';
+      baseUrl = '$_protocol://$_ipAddress/ddcdialog.html?useOvl=1&busyReload=1&type=$_resolution';
+    }
+    
+    // Add timestamp to prevent caching issues (like web prototype)
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return '$baseUrl&_t=$timestamp';
+  }
+  
+  String _buildUrlParameters() {
+    if (_resolution == 'QVGA') {
+      return 'useOvl=1&busyReload=1&type=$_resolution&x=0&y=0&fit=1';
+    } else {
+      return 'useOvl=1&busyReload=1&type=$_resolution';
     }
   }
 
@@ -173,29 +296,55 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (context) => Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-          minHeight: MediaQuery.of(context).size.height * 0.5,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SingleChildScrollView(
-          child: ConnectionSettingsWidget(
-          protocol: _protocol,
-          ipAddress: _ipAddress,
-          resolution: _resolution,
-          onSettingsChanged: (protocol, ip, resolution) {
-            setState(() {
-              _protocol = protocol;
-              _ipAddress = ip;
-              _resolution = resolution;
-              _currentPreset = null; // Clear current preset when manually changed
-            });
-          },
-          onConnect: _connectToDDC,
+      builder: (context) => SafeArea(
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+            minHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Scrollable content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).padding.bottom + 16,
+                  ),
+                  child: ConnectionSettingsWidget(
+                    protocol: _protocol,
+                    ipAddress: _ipAddress,
+                    resolution: _resolution,
+                    onSettingsChanged: (protocol, ip, resolution) {
+                      setState(() {
+                        _protocol = protocol;
+                        _ipAddress = ip;
+                        _resolution = resolution;
+                        _currentPreset = null; // Clear current preset when manually changed
+                      });
+                    },
+                    onConnect: _connectToDDC,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -208,19 +357,47 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (context) => Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-          minHeight: MediaQuery.of(context).size.height * 0.6,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: PresetSelectorWidget(
-          currentPreset: _currentPreset,
-          onPresetSelected: _loadPreset,
-          onSavePreset: () => _saveCurrentAsPreset(),
+      builder: (context) => SafeArea(
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+            minHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Content
+              Flexible(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).padding.bottom + 16,
+                  ),
+                  child: PresetSelectorWidget(
+                    currentPreset: _currentPreset,
+                    onPresetSelected: _loadPreset,
+                    onSavePreset: () => _saveCurrentAsPreset(),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -350,6 +527,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
         ],
       ),
       body: SafeArea(
+        bottom: true, // Ensure bottom safe area is respected
         child: Column(
           children: [
             // Status Bar
@@ -379,43 +557,103 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                 ],
               ),
             ),
-            // WebView
+            // WebView with additional bottom padding to avoid system UI
             Expanded(
-              child: Screenshot(
-                controller: _screenshotController,
-                child: _ipAddress.isEmpty
-                    ? _buildWelcomeScreen()
-                    : WebViewWidget(controller: _webViewController),
+              child: Container(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).padding.bottom > 0 
+                    ? 0 // SafeArea already handles it
+                    : 16, // Add padding for devices without safe area
+                ),
+                child: Screenshot(
+                  controller: _screenshotController,
+                  child: _ipAddress.isEmpty
+                      ? _buildWelcomeScreen()
+                      : Stack(
+                          children: [
+                            InteractiveViewer(
+                              minScale: 0.1,
+                              maxScale: 4.0,
+                              constrained: false,
+                              child: SizedBox(
+                                width: 1200, // Force desktop width
+                                height: 800, // Force desktop height
+                                child: WebViewWidget(
+                                  controller: _webViewController,
+                                  gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                                    Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
+                                    Factory<LongPressGestureRecognizer>(() => LongPressGestureRecognizer()),
+                                  },
+                                ),
+                              ),
+                            ),
+                            // Instructions overlay (dismissible)
+                            if (_isConnected && _showZoomInstructions)
+                              Positioned(
+                                top: 10,
+                                left: 10,
+                                right: 10,
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black87,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.touch_app, color: Colors.white, size: 20),
+                                      const SizedBox(width: 8),
+                                      const Expanded(
+                                        child: Text(
+                                          'Pinch to zoom • Drag to scroll • Tap to interact',
+                                          style: TextStyle(color: Colors.white, fontSize: 14),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        onPressed: () => setState(() => _showZoomInstructions = false),
+                                        icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                        constraints: const BoxConstraints(),
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: SpeedDial(
-        animatedIcon: AnimatedIcons.menu_close,
-        backgroundColor: Theme.of(context).primaryColor,
-        children: [
-          SpeedDialChild(
-            child: const Icon(Icons.camera_alt),
-            label: 'Screenshot',
-            onTap: _takeScreenshot,
-          ),
-          SpeedDialChild(
-            child: const Icon(Icons.photo_library),
-            label: 'Gallery',
-            onTap: _showScreenshotGallery,
-          ),
-          SpeedDialChild(
-            child: const Icon(Icons.settings),
-            label: 'Settings',
-            onTap: _showSettingsDialog,
-          ),
-          SpeedDialChild(
-            child: const Icon(Icons.bookmark),
-            label: 'Presets',
-            onTap: _showPresetSelector,
-          ),
-        ],
+      floatingActionButton: SafeArea(
+        child: SpeedDial(
+          animatedIcon: AnimatedIcons.menu_close,
+          backgroundColor: Theme.of(context).primaryColor,
+          children: [
+            SpeedDialChild(
+              child: const Icon(Icons.camera_alt),
+              label: 'Screenshot',
+              onTap: _takeScreenshot,
+            ),
+            SpeedDialChild(
+              child: const Icon(Icons.photo_library),
+              label: 'Gallery',
+              onTap: _showScreenshotGallery,
+            ),
+            SpeedDialChild(
+              child: const Icon(Icons.settings),
+              label: 'Settings',
+              onTap: _showSettingsDialog,
+            ),
+            SpeedDialChild(
+              child: const Icon(Icons.bookmark),
+              label: 'Presets',
+              onTap: _showPresetSelector,
+            ),
+          ],
+        ),
       ),
     );
   }

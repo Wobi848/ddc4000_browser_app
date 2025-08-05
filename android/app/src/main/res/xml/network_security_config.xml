@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext traffic for DDC4000 devices (HTTP connections) -->
-    <domain-config cleartextTrafficPermitted="true">
-        <!-- Local network ranges for DDC4000 devices -->
-        <domain includeSubdomains="false">10.0.0.0</domain>
-        <domain includeSubdomains="false">172.16.0.0</domain>
-        <domain includeSubdomains="false">192.168.0.0</domain>
-        <domain includeSubdomains="false">localhost</domain>
-        <domain includeSubdomains="false">127.0.0.1</domain>
-    </domain-config>
-    
-    <!-- Base configuration for HTTPS -->
-    <base-config cleartextTrafficPermitted="false">
+    <!-- Allow cleartext traffic for all local/private networks -->
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system"/>
         </trust-anchors>
     </base-config>
+    
+    <!-- Specific domain configuration for DDC4000 devices -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Specific IP addresses -->
+        <domain includeSubdomains="false">192.168.10.21</domain>
+        <domain includeSubdomains="false">192.168.1.1</domain>
+        <domain includeSubdomains="false">192.168.0.1</domain>
+        <domain includeSubdomains="false">10.0.0.1</domain>
+        <domain includeSubdomains="false">172.16.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
 </network-security-config>

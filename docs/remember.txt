@@ -1,0 +1,5 @@
+Original URL: http://192.168.10.21/ddcdialog.html?useOvl=1&busyReload=1&type=WVGA 
+Final URL with timestamp: http://192.168.10.21/ddcdialog.html?useOvl=1&busyReload=1&type=WVGA&_t=1754412484990
+
+
+http://192.168.10.21/ddcdialog.html?useOvl=1&busyReload=1&type=WVGA&_t=1754412848597
