@@ -34,6 +34,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   // UI state
   DDCPreset? _currentPreset;
   bool _showZoomInstructions = true;
+  final TransformationController _transformationController = TransformationController();
   
   @override
   void initState() {
@@ -119,12 +120,23 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   }
 
   Future<void> _loadAutoPreset() async {
+    print('🔄 Checking for autoload preset...');
     final autoPresetName = await PresetService.instance.getAutoloadPreset();
+    print('   Autoload preset name: $autoPresetName');
+    
     if (autoPresetName != null) {
       final preset = await PresetService.instance.getPresetByName(autoPresetName);
+      print('   Found preset: ${preset?.name}');
+      
       if (preset != null) {
+        print('✅ Loading autoload preset: ${preset.name}');
         _loadPreset(preset);
+      } else {
+        print('❌ Autoload preset not found, removing autoload setting');
+        await PresetService.instance.setAutoloadPreset(null);
       }
+    } else {
+      print('ℹ️ No autoload preset set');
     }
   }
 
@@ -217,13 +229,13 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
         // Force desktop viewport
         viewport = document.createElement('meta');
         viewport.name = 'viewport';
-        viewport.content = 'width=1200, initial-scale=1.0, user-scalable=no';
+        viewport.content = 'width=1400, initial-scale=1.0, user-scalable=no';
         document.head.appendChild(viewport);
         
         // Set minimum sizes to ensure full interface
-        document.body.style.minWidth = '1200px';
-        document.body.style.minHeight = '800px';
-        document.documentElement.style.minWidth = '1200px';
+        document.body.style.minWidth = '1400px';
+        document.body.style.minHeight = '1000px';
+        document.documentElement.style.minWidth = '1400px';
         
         console.log('✅ DESKTOP MODE READY FOR INTERACTIVEVIEWER');
         
@@ -231,6 +243,29 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
     ''';
     
     _webViewController.runJavaScript(jsCode);
+  }
+
+  void _zoomIn() {
+    final currentScale = _transformationController.value.getMaxScaleOnAxis();
+    final newScale = (currentScale * 1.2).clamp(0.05, 5.0);
+    _transformationController.value = Matrix4.identity()..scale(newScale);
+  }
+
+  void _zoomOut() {
+    final currentScale = _transformationController.value.getMaxScaleOnAxis();
+    final newScale = (currentScale / 1.2).clamp(0.05, 5.0);
+    _transformationController.value = Matrix4.identity()..scale(newScale);
+  }
+
+  void _fitToScreen() {
+    // Calculate scale to fit the 1400x1000 content in the screen
+    final screenSize = MediaQuery.of(context).size;
+    final scaleX = screenSize.width / 1400;
+    final scaleY = (screenSize.height - 100) / 1000; // Account for app bar
+    final fitScale = (scaleX < scaleY ? scaleX : scaleY).clamp(0.05, 5.0);
+    
+    _transformationController.value = Matrix4.identity()..scale(fitScale);
+    print('🎯 Fit to screen: ${fitScale}x scale');
   }
 
   String _buildDDCUrl() {
@@ -446,20 +481,33 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
             onPressed: () async {
               final name = nameController.text.trim();
               if (name.isNotEmpty) {
-                final preset = DDCPreset(
-                  name: name,
-                  protocol: _protocol,
-                  ip: _ipAddress,
-                  resolution: _resolution,
-                  createdAt: DateTime.now(),
-                );
-                
-                await PresetService.instance.savePreset(preset);
-                _showSuccessToast('Preset saved successfully');
-                
-                if (mounted) {
-                  Navigator.of(context).pop();
+                try {
+                  print('🔄 Saving preset: $name');
+                  print('   Protocol: $_protocol');
+                  print('   IP: $_ipAddress');
+                  print('   Resolution: $_resolution');
+                  
+                  final preset = DDCPreset(
+                    name: name,
+                    protocol: _protocol,
+                    ip: _ipAddress,
+                    resolution: _resolution,
+                    createdAt: DateTime.now(),
+                  );
+                  
+                  await PresetService.instance.savePreset(preset);
+                  print('✅ Preset saved successfully: $name');
+                  _showSuccessToast('Preset "$name" saved successfully');
+                  
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                  }
+                } catch (e) {
+                  print('❌ Error saving preset: $e');
+                  _showErrorToast('Failed to save preset: ${e.toString()}');
                 }
+              } else {
+                _showErrorToast('Please enter a preset name');
               }
             },
             child: const Text('Save'),
@@ -572,12 +620,17 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                       : Stack(
                           children: [
                             InteractiveViewer(
-                              minScale: 0.1,
-                              maxScale: 4.0,
+                              transformationController: _transformationController,
+                              minScale: 0.05,
+                              maxScale: 5.0,
                               constrained: false,
+                              scaleEnabled: true,
+                              panEnabled: true,
+                              boundaryMargin: const EdgeInsets.all(double.infinity),
+                              clipBehavior: Clip.none,
                               child: SizedBox(
-                                width: 1200, // Force desktop width
-                                height: 800, // Force desktop height
+                                width: 1400, // Larger desktop width to capture more interface
+                                height: 1000, // Larger desktop height to capture more interface
                                 child: WebViewWidget(
                                   controller: _webViewController,
                                   gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
@@ -605,8 +658,10 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                                       const SizedBox(width: 8),
                                       const Expanded(
                                         child: Text(
-                                          'Pinch to zoom • Drag to scroll • Tap to interact',
-                                          style: TextStyle(color: Colors.white, fontSize: 14),
+                                          'Pinch out for full view • Drag to scroll',
+                                          style: TextStyle(color: Colors.white, fontSize: 13),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       IconButton(
@@ -617,6 +672,37 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                                       ),
                                     ],
                                   ),
+                                ),
+                              ),
+                            // Manual zoom controls
+                            if (_isConnected)
+                              Positioned(
+                                bottom: 80,
+                                right: 16,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    FloatingActionButton.small(
+                                      heroTag: "zoom_in",
+                                      onPressed: _zoomIn,
+                                      child: const Icon(Icons.zoom_in),
+                                      backgroundColor: Colors.blue.withOpacity(0.8),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    FloatingActionButton.small(
+                                      heroTag: "zoom_out", 
+                                      onPressed: _zoomOut,
+                                      child: const Icon(Icons.zoom_out),
+                                      backgroundColor: Colors.blue.withOpacity(0.8),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    FloatingActionButton.small(
+                                      heroTag: "fit_screen",
+                                      onPressed: _fitToScreen,
+                                      child: const Icon(Icons.fit_screen),
+                                      backgroundColor: Colors.green.withOpacity(0.8),
+                                    ),
+                                  ],
                                 ),
                               ),
                           ],

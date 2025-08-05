@@ -13,7 +13,20 @@ class PresetService {
   SharedPreferences? _prefs;
 
   Future<void> init() async {
-    _prefs ??= await SharedPreferences.getInstance();
+    try {
+      print('🔧 PresetService.init() called');
+      if (_prefs == null) {
+        print('   - Getting SharedPreferences instance...');
+        _prefs = await SharedPreferences.getInstance();
+        print('   - SharedPreferences initialized successfully');
+      } else {
+        print('   - SharedPreferences already initialized');
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error initializing SharedPreferences: $e');
+      print('   Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<List<DDCPreset>> getAllPresets() async {
@@ -27,22 +40,34 @@ class PresetService {
   }
 
   Future<void> savePreset(DDCPreset preset) async {
+    print('📋 PresetService.savePreset() called');
+    print('   Preset name: ${preset.name}');
+    print('   Preset IP: ${preset.ip}');
+    
     await init();
+    print('   SharedPreferences initialized');
+    
     final presets = await getAllPresets();
+    print('   Current presets count: ${presets.length}');
     
     // Remove existing preset with same name or IP
+    final removedCount = presets.length;
     presets.removeWhere((p) => p.name == preset.name || 
                              (p.ip == preset.ip && p.protocol == preset.protocol));
+    print('   Removed ${removedCount - presets.length} duplicate presets');
     
     // Add new preset
     presets.insert(0, preset);
+    print('   Added new preset, total count: ${presets.length}');
     
     // Keep only last 20 presets
     if (presets.length > 20) {
       presets.removeRange(20, presets.length);
+      print('   Trimmed to 20 presets');
     }
     
     await _savePresets(presets);
+    print('✅ Preset saved to SharedPreferences');
   }
 
   Future<void> deletePreset(String name) async {
@@ -87,11 +112,31 @@ class PresetService {
   }
 
   Future<void> _savePresets(List<DDCPreset> presets) async {
-    final presetsJson = presets
-        .map((preset) => jsonEncode(preset.toJson()))
-        .toList();
-    
-    await _prefs!.setStringList(_presetsKey, presetsJson);
+    try {
+      print('💾 _savePresets called with ${presets.length} presets');
+      
+      final presetsJson = presets
+          .map((preset) {
+            print('   - Converting preset: ${preset.name}');
+            final json = preset.toJson();
+            print('   - JSON: $json');
+            return jsonEncode(json);
+          })
+          .toList();
+      
+      print('   - Calling SharedPreferences.setStringList...');
+      final success = await _prefs!.setStringList(_presetsKey, presetsJson);
+      print('   - setStringList result: $success');
+      
+      // Verify it was saved
+      final saved = _prefs!.getStringList(_presetsKey);
+      print('   - Verification: Found ${saved?.length ?? 0} saved presets');
+      
+    } catch (e, stackTrace) {
+      print('❌ Error in _savePresets: $e');
+      print('   Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<void> clearAllPresets() async {
