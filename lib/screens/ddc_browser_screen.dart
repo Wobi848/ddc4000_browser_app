@@ -39,6 +39,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   // UI state
   DDCPreset? _currentPreset;
   bool _showZoomInstructions = true;
+  bool _isCapturingScreenshot = false;
   final TransformationController _transformationController = TransformationController();
   
   @override
@@ -183,7 +184,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
               _isConnected = false;
               _statusMessage = 'Failed: ${error.description}';
             });
-            _showErrorToast('Connection failed: ${error.description}');
+            _showErrorToast('Connection failed');
           },
           onNavigationRequest: (NavigationRequest request) {
             print('🔄 Navigation Request: ${request.url}');
@@ -290,8 +291,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
     
     _webViewController.loadRequest(Uri.parse(url));
     
-    // Show URL in toast for debugging
-    _showSuccessToast('Connecting to: $url');
+    _showSuccessToast('Connecting...');
     
     setState(() {
       _isLoading = true;
@@ -399,13 +399,20 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
       // Request permissions first
       final hasPermission = await ScreenshotService.instance.requestPermissions();
       if (!hasPermission) {
-        _showErrorToast('Storage permission required for screenshots');
+        _showErrorToast('Storage permission required');
         return;
       }
 
-      // Show loading state
-      _showSuccessToast('Capturing screenshot...');
+      // Hide UI elements for clean screenshot
+      setState(() {
+        _isCapturingScreenshot = true;
+        _showZoomInstructions = false;
+      });
 
+      // Wait for UI to update
+      await Future.delayed(const Duration(milliseconds: 100));
+
+  
       final screenshotData = await ScreenshotService.instance.takeScreenshot(
         controller: _screenshotController,
         ddcUrl: _isConnected ? _buildDDCUrl() : null,
@@ -413,13 +420,18 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
         resolution: _resolution,
       );
 
+      // Restore UI elements
+      setState(() {
+        _isCapturingScreenshot = false;
+      });
+
       if (screenshotData != null) {
-        _showSuccessToast('Screenshot saved to gallery');
+        _showSuccessToast('Screenshot saved');
       } else {
-        _showErrorToast('Failed to capture screenshot');
+        _showErrorToast('Screenshot failed');
       }
     } catch (e) {
-      _showErrorToast('Screenshot error: ${e.toString()}');
+      _showErrorToast('Screenshot failed');
       print('Screenshot error details: $e');
     }
   }
@@ -540,28 +552,11 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   }
 
   void _saveCurrentAsPreset() async {
-    print('🔧 _saveCurrentAsPreset() called');
-    
-    // ALWAYS show this toast first to confirm function is called
-    _showSuccessToast('🔧 Save function called! Checking settings...');
-    await Future.delayed(const Duration(milliseconds: 1000));
-    
-    print('   Current IP Address: "$_ipAddress" (length: ${_ipAddress.length})');
-    print('   Current Protocol: "$_protocol"');
-    print('   Current Resolution: "$_resolution"');
-    
-    // Show current state on screen
-    _showSuccessToast('📋 Current: $_protocol://$_ipAddress ($_resolution)');
-    await Future.delayed(const Duration(milliseconds: 1000));
-    
     if (_ipAddress.isEmpty) {
-      print('❌ IP Address is empty, showing error');
-      _showErrorToast('❌ Please configure connection settings first');
+      _showErrorToast('Please configure connection settings first');
       return;
     }
-
-    print('✅ IP Address is valid, showing save dialog');
-    _showSuccessToast('✅ IP valid, opening save dialog...');
+    
     _showSavePresetDialog();
   }
 
@@ -600,18 +595,6 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
               final name = nameController.text.trim();
               if (name.isNotEmpty) {
                 try {
-                  // Show detailed current state
-                  _showSuccessToast('📝 Attempting to save "$name"...');
-                  await Future.delayed(const Duration(milliseconds: 500));
-                  
-                  print('🔄 Saving preset: $name');
-                  print('   Protocol: $_protocol');
-                  print('   IP: $_ipAddress');
-                  print('   Resolution: $_resolution');
-                  
-                  // Show current settings on screen
-                  _showSuccessToast('📋 Settings: $_protocol://$_ipAddress ($_resolution)');
-                  
                   final preset = DDCPreset(
                     name: name,
                     protocol: _protocol,
@@ -621,28 +604,13 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                   );
                   
                   await PresetService.instance.savePreset(preset);
-                  print('✅ Preset saved successfully: $name');
-                  
-                  // Verify the preset was actually saved
-                  print('🔍 Verifying preset was saved...');
-                  final allPresets = await PresetService.instance.getAllPresets();
-                  print('   Total presets after save: ${allPresets.length}');
-                  
-                  if (allPresets.any((p) => p.name == name)) {
-                    _showSuccessToast('✅ Preset "$name" saved! Total: ${allPresets.length}');
-                    for (var p in allPresets) {
-                      print('   - ${p.name}: ${p.protocol}://${p.ip}');
-                    }
-                  } else {
-                    _showErrorToast('❌ Preset saved but not found in list!');
-                  }
+                  _showSuccessToast('Preset saved');
                   
                   if (mounted) {
                     Navigator.of(context).pop();
                   }
                 } catch (e) {
-                  print('❌ Error saving preset: $e');
-                  _showErrorToast('❌ Failed to save preset: ${e.toString()}');
+                  _showErrorToast('Save failed');
                 }
               } else {
                 _showErrorToast('Please enter a preset name');
@@ -818,7 +786,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                                 ),
                               ),
                             // Manual zoom controls
-                            if (_isConnected)
+                            if (_isConnected && !_isCapturingScreenshot)
                               Positioned(
                                 bottom: 80,
                                 right: 16,
