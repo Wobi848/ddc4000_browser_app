@@ -14,6 +14,7 @@ import '../services/screenshot_service.dart';
 import '../widgets/connection_settings_widget.dart';
 import '../widgets/preset_selector_widget.dart';
 import '../widgets/screenshot_gallery_widget.dart';
+import 'privacy_policy_screen.dart';
 
 class DDCBrowserScreen extends StatefulWidget {
   const DDCBrowserScreen({super.key});
@@ -24,8 +25,8 @@ class DDCBrowserScreen extends StatefulWidget {
 
 class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBindingObserver {
   // Build information - update this for each build  
-  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_17.52";
-  static const String BUILD_TIMESTAMP = "2025-08-06 17:52";
+  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_18.06";
+  static const String BUILD_TIMESTAMP = "2025-08-06 18:06";
   late WebViewController _webViewController;
   final ScreenshotController _screenshotController = ScreenshotController();
   
@@ -52,8 +53,117 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
     _loadAutoPreset();
   }
 
-  void _showVersionInfo() {
-    // Show detailed version info in a dialog
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).primaryColor,
+                  Theme.of(context).primaryColor.withOpacity(0.8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(
+                  Icons.home_work,
+                  size: 48,
+                  color: Colors.white,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'DDC4000 Browser',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Professional Building Automation',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Build Information'),
+            subtitle: Text(DEBUG_BUILD_ID),
+            onTap: () {
+              Navigator.pop(context);
+              _showBuildInfoDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip),
+            title: const Text('Privacy Policy'),
+            subtitle: const Text('How we handle your data'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const PrivacyPolicyScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Connection Settings'),
+            subtitle: const Text('Configure DDC4000 connection'),
+            onTap: () {
+              Navigator.pop(context);
+              _showSettingsDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bookmark),
+            title: const Text('Presets'),
+            subtitle: const Text('Manage saved connections'),
+            onTap: () {
+              Navigator.pop(context);
+              _showPresetSelector();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Screenshot Gallery'),
+            subtitle: const Text('View saved screenshots'),
+            onTap: () {
+              Navigator.pop(context);
+              _showScreenshotGallery();
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.fullscreen),
+            title: const Text('Toggle Fullscreen'),
+            subtitle: Text(_isFullscreen ? 'Exit fullscreen mode' : 'Enter fullscreen mode'),
+            onTap: () {
+              Navigator.pop(context);
+              _toggleFullscreen();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBuildInfoDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -106,9 +216,9 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
             ),
             const SizedBox(height: 8),
             const Text('✅ Enhanced preset debugging'),
-            const Text('✅ Visible error messages'),
-            const Text('✅ Storage system diagnostics'),
-            const Text('✅ Professional DDC4000 icons'),
+            const Text('✅ Clean user interface'),
+            const Text('✅ Professional fullscreen mode'),
+            const Text('✅ Screenshot functionality'),
           ],
         ),
         actions: [
@@ -682,15 +792,12 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
       },
       child: Scaffold(
       appBar: _isFullscreen ? null : AppBar(
-        title: Row(
-          children: [
-            GestureDetector(
-              onTap: _showVersionInfo,
-              child: const Icon(Icons.home_work, size: 24),
-            ),
-            const SizedBox(width: 8),
-            const Text('DDC4000 Browser'),
-          ],
+        title: const Text('DDC4000 Browser'),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
         ),
         actions: [
           IconButton(
@@ -710,6 +817,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
           ),
         ],
       ),
+      drawer: _isFullscreen ? null : _buildDrawer(context),
       body: SafeArea(
         bottom: true, // Ensure bottom safe area is respected
         child: Column(
@@ -862,7 +970,8 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
       floatingActionButton: !_isFullscreen ? SafeArea(
         child: SpeedDial(
           animatedIcon: AnimatedIcons.menu_close,
-          backgroundColor: Theme.of(context).primaryColor,
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
           children: [
             SpeedDialChild(
               child: const Icon(Icons.camera_alt),

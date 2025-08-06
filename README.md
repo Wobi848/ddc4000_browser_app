@@ -22,12 +22,12 @@
 - **📸 Screenshot Capture** - Native screenshot functionality with built-in gallery
 - **🔄 Auto-Fit Scaling** - Intelligent interface scaling for all screen sizes
 
-### Enhanced Mobile Features
+### Enhanced Mobile Features  
 - **🎯 Material Design 3** - Professional DDC4000 branded interface
-- **📊 Real-time Status** - Visual connection indicators and toast notifications
-- **⚙️ Speed Dial Controls** - Quick access floating action button
-- **🔒 Permission Management** - Automatic network and storage permissions
-- **📱 Orientation Support** - Portrait and landscape with auto-rotation
+- **📱 Side Navigation Menu** - Easy access to all app functions
+- **🔍 Fullscreen Mode** - Immersive DDC4000 interface viewing
+- **🔒 Privacy Policy** - Built-in policy accessible via app menu
+- **📊 Clean Status Bar** - Simplified connection status display
 
 ## 📱 Screenshots
 
@@ -113,7 +113,8 @@ lib/
 │   ├── preset_service.dart     # Preset storage and management
 │   └── screenshot_service.dart # Screenshot capture and gallery management
 ├── screens/                     # Main application screens
-│   └── ddc_browser_screen.dart # Primary DDC4000 browser interface
+│   ├── ddc_browser_screen.dart # Primary DDC4000 browser interface  
+│   └── privacy_policy_screen.dart # Built-in privacy policy
 └── widgets/                     # Reusable UI components
     ├── connection_settings_widget.dart
     ├── preset_selector_widget.dart
