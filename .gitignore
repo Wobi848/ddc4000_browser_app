@@ -103,3 +103,8 @@ GoogleService-Info.plist
 *.jks
 *.keystore
 key.properties
+
+# Security backup files (NEVER COMMIT!)
+SECURITY_BACKUP_INFO.txt
+*BACKUP_INFO*
+*PASSWORD*

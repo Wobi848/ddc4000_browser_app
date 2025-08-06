@@ -14,7 +14,8 @@
       "Bash(for:*)",
       "Bash(do)",
       "Bash(done)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(keytool:*)"
     ],
     "deny": []
   }
