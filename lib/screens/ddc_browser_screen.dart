@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -22,9 +23,9 @@ class DDCBrowserScreen extends StatefulWidget {
 }
 
 class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBindingObserver {
-  // Build information - update this for each build
-  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_16.35";
-  static const String BUILD_TIMESTAMP = "2025-08-06 16:35";
+  // Build information - update this for each build  
+  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_17.40";
+  static const String BUILD_TIMESTAMP = "2025-08-06 17:40";
   late WebViewController _webViewController;
   final ScreenshotController _screenshotController = ScreenshotController();
   
@@ -40,6 +41,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   DDCPreset? _currentPreset;
   bool _showZoomInstructions = true;
   bool _isCapturingScreenshot = false;
+  bool _isFullscreen = false;
   final TransformationController _transformationController = TransformationController();
   
   @override
@@ -204,39 +206,41 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   }
 
   Future<void> _loadAutoPreset() async {
-    print('🔄 Checking for simple auto-load...');
+    print('🔄 Checking for autoload preset...');
     
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final autoLoad = prefs.getBool('simple_auto_load') ?? false;
+      final autoloadPresetName = await PresetService.instance.getAutoloadPreset();
       
-      if (autoLoad) {
-        final protocol = prefs.getString('auto_protocol') ?? 'http';
-        final ip = prefs.getString('auto_ip') ?? '';
-        final resolution = prefs.getString('auto_resolution') ?? 'WVGA';
+      if (autoloadPresetName != null && autoloadPresetName.isNotEmpty) {
+        print('✅ Found autoload preset: $autoloadPresetName');
         
-        if (ip.isNotEmpty) {
-          print('✅ Loading simple auto-load: $protocol://$ip ($resolution)');
-          setState(() {
-            _protocol = protocol;
-            _ipAddress = ip;
-            _resolution = resolution;
-          });
-          
-          // Auto-connect after a short delay
-          Future.delayed(const Duration(milliseconds: 1000), () {
-            if (mounted) {
-              _connectToDDC();
-            }
-          });
-        } else {
-          print('❌ Auto-load enabled but no IP saved');
-        }
+        // Get all presets and find the autoload one
+        final presets = await PresetService.instance.getAllPresets();
+        final autoloadPreset = presets.firstWhere(
+          (preset) => preset.name == autoloadPresetName,
+          orElse: () => throw Exception('Autoload preset not found'),
+        );
+        
+        print('✅ Loading autoload preset: ${autoloadPreset.protocol}://${autoloadPreset.ip} (${autoloadPreset.resolution})');
+        
+        setState(() {
+          _protocol = autoloadPreset.protocol;
+          _ipAddress = autoloadPreset.ip;
+          _resolution = autoloadPreset.resolution;
+          _currentPreset = autoloadPreset;
+        });
+        
+        // Auto-connect after a short delay
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) {
+            _connectToDDC();
+          }
+        });
       } else {
-        print('ℹ️ Simple auto-load disabled');
+        print('ℹ️ No autoload preset configured');
       }
     } catch (e) {
-      print('❌ Error loading simple auto-load: $e');
+      print('❌ Error loading autoload preset: $e');
     }
   }
 
@@ -360,11 +364,27 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
     // Calculate scale to fit the 1400x1000 content in the screen
     final screenSize = MediaQuery.of(context).size;
     final scaleX = screenSize.width / 1400;
-    final scaleY = (screenSize.height - 100) / 1000; // Account for app bar
+    final scaleY = (_isFullscreen ? screenSize.height : (screenSize.height - 100)) / 1000; // Account for app bar when not fullscreen
     final fitScale = (scaleX < scaleY ? scaleX : scaleY).clamp(0.05, 5.0);
     
     _transformationController.value = Matrix4.identity()..scale(fitScale);
-    print('🎯 Fit to screen: ${fitScale}x scale');
+    print('🎯 Fit to screen: ${fitScale}x scale (fullscreen: $_isFullscreen)');
+  }
+
+  void _toggleFullscreen() {
+    setState(() {
+      _isFullscreen = !_isFullscreen;
+    });
+
+    if (_isFullscreen) {
+      // Enter fullscreen
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      _showSuccessToast('Fullscreen mode enabled');
+    } else {
+      // Exit fullscreen
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      _showSuccessToast('Fullscreen mode disabled');
+    }
   }
 
   String _buildDDCUrl() {
@@ -653,8 +673,15 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      canPop: !_isFullscreen,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (_isFullscreen) {
+          _toggleFullscreen(); // Exit fullscreen instead of closing app
+        }
+      },
+      child: Scaffold(
+      appBar: _isFullscreen ? null : AppBar(
         title: const Row(
           children: [
             Icon(Icons.home_work, size: 24),
@@ -663,6 +690,11 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
+            onPressed: _toggleFullscreen,
+            tooltip: _isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen',
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: _showVersionInfo,
@@ -689,33 +721,34 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
         bottom: true, // Ensure bottom safe area is respected
         child: Column(
           children: [
-            // Status Bar
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: _isConnected ? Colors.green : (_isLoading ? Colors.orange : Colors.red),
-              child: Row(
-                children: [
-                  Icon(
-                    _isConnected ? Icons.wifi : (_isLoading ? Icons.wifi_protected_setup : Icons.wifi_off),
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _statusMessage,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                  const Spacer(),
-                  if (_ipAddress.isNotEmpty) ...[
-                    Text(
-                      '$_protocol://$_ipAddress ($_resolution)',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
+            // Status Bar (hidden in fullscreen)
+            if (!_isFullscreen)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: _isConnected ? Colors.green : (_isLoading ? Colors.orange : Colors.red),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isConnected ? Icons.wifi : (_isLoading ? Icons.wifi_protected_setup : Icons.wifi_off),
+                      color: Colors.white,
+                      size: 16,
                     ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _statusMessage,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    const Spacer(),
+                    if (_ipAddress.isNotEmpty) ...[
+                      Text(
+                        '$_protocol://$_ipAddress ($_resolution)',
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
             // WebView with additional bottom padding to avoid system UI
             Expanded(
               child: Container(
@@ -785,7 +818,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                                   ),
                                 ),
                               ),
-                            // Manual zoom controls
+                            // Manual zoom controls (hidden during screenshot capture)
                             if (_isConnected && !_isCapturingScreenshot)
                               Positioned(
                                 bottom: 80,
@@ -813,6 +846,22 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                                       child: const Icon(Icons.fit_screen),
                                       backgroundColor: Colors.green.withOpacity(0.8),
                                     ),
+                                    const SizedBox(height: 8),
+                                    FloatingActionButton.small(
+                                      heroTag: "fullscreen_toggle",
+                                      onPressed: _toggleFullscreen,
+                                      child: Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
+                                      backgroundColor: Colors.orange.withOpacity(0.8),
+                                    ),
+                                    if (_isFullscreen) ...[
+                                      const SizedBox(height: 8),
+                                      FloatingActionButton.small(
+                                        heroTag: "screenshot_fullscreen",
+                                        onPressed: _takeScreenshot,
+                                        child: const Icon(Icons.camera_alt),
+                                        backgroundColor: Colors.purple.withOpacity(0.8),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -824,7 +873,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
           ],
         ),
       ),
-      floatingActionButton: SafeArea(
+      floatingActionButton: !_isFullscreen ? SafeArea(
         child: SpeedDial(
           animatedIcon: AnimatedIcons.menu_close,
           backgroundColor: Theme.of(context).primaryColor,
@@ -840,6 +889,11 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
               onTap: _showScreenshotGallery,
             ),
             SpeedDialChild(
+              child: Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
+              label: _isFullscreen ? 'Exit Fullscreen' : 'Fullscreen',
+              onTap: _toggleFullscreen,
+            ),
+            SpeedDialChild(
               child: const Icon(Icons.settings),
               label: 'Settings',
               onTap: _showSettingsDialog,
@@ -851,6 +905,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
             ),
           ],
         ),
+      ) : null,
       ),
     );
   }

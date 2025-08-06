@@ -25,7 +25,6 @@ class _ConnectionSettingsWidgetState extends State<ConnectionSettingsWidget> {
   late TextEditingController _ipController;
   late String _selectedProtocol;
   late String _selectedResolution;
-  bool _autoLoad = false;
 
   final List<String> _protocols = ['http', 'https'];
   final List<String> _resolutions = ['QVGA', 'WVGA'];
@@ -44,7 +43,6 @@ class _ConnectionSettingsWidgetState extends State<ConnectionSettingsWidget> {
     _ipController = TextEditingController(text: widget.ipAddress);
     _selectedProtocol = widget.protocol;
     _selectedResolution = widget.resolution;
-    _loadAutoLoadSettings();
   }
 
   @override
@@ -67,40 +65,6 @@ class _ConnectionSettingsWidgetState extends State<ConnectionSettingsWidget> {
     Navigator.of(context).pop();
   }
 
-  Future<void> _loadAutoLoadSettings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final autoLoad = prefs.getBool('simple_auto_load') ?? false;
-      setState(() => _autoLoad = autoLoad);
-      print('📱 Loaded auto-load setting: $autoLoad');
-    } catch (e) {
-      print('❌ Error loading auto-load settings: $e');
-    }
-  }
-
-  Future<void> _saveAutoLoadSettings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      if (_autoLoad) {
-        // Save current connection settings for auto-load
-        await prefs.setBool('simple_auto_load', true);
-        await prefs.setString('auto_protocol', _selectedProtocol);
-        await prefs.setString('auto_ip', _ipController.text.trim());
-        await prefs.setString('auto_resolution', _selectedResolution);
-        print('💾 Saved auto-load settings: $_selectedProtocol://${_ipController.text.trim()} ($_selectedResolution)');
-      } else {
-        // Clear auto-load settings
-        await prefs.setBool('simple_auto_load', false);
-        await prefs.remove('auto_protocol');
-        await prefs.remove('auto_ip');
-        await prefs.remove('auto_resolution');
-        print('🗑️ Cleared auto-load settings');
-      }
-    } catch (e) {
-      print('❌ Error saving auto-load settings: $e');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -296,26 +260,6 @@ class _ConnectionSettingsWidgetState extends State<ConnectionSettingsWidget> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Auto-Load Toggle
-          Row(
-            children: [
-              Checkbox(
-                value: _autoLoad,
-                onChanged: (value) {
-                  setState(() => _autoLoad = value ?? false);
-                  _saveAutoLoadSettings();
-                },
-              ),
-              Expanded(
-                child: Text(
-                  'Auto-connect on app startup',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
 
           // Connect Button
           SizedBox(
