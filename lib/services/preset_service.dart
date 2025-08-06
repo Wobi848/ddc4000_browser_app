@@ -27,33 +27,23 @@ class PresetService {
         final testValue = _prefs!.getString('test_key');
         print('   - Test write/read result: $testValue');
         
-        // Test simple preset functionality
-        print('   - Testing simple preset storage...');
+        // Test simple preset functionality (create permanent test preset)
+        print('   - Creating test preset for debugging...');
         await _prefs!.setString('simple_preset_TEST', 'http|192.168.1.1|WVGA|123456789');
-        await _prefs!.setStringList('simple_preset_list', ['TEST']);
+        final currentList = _prefs!.getStringList('simple_preset_list') ?? [];
+        if (!currentList.contains('TEST')) {
+          currentList.add('TEST');
+          await _prefs!.setStringList('simple_preset_list', currentList);
+        }
         final testPreset = _prefs!.getString('simple_preset_TEST');
         final testList = _prefs!.getStringList('simple_preset_list');
         print('   - Test preset data: $testPreset');
         print('   - Test preset list: $testList');
         
-        if (testValue == 'test_value' && testPreset != null && testList != null) {
+        if (testValue == 'test_value' && testPreset != null) {
           print('   - ✅ SharedPreferences is working correctly');
-          
-          // Show visible confirmation
-          Fluttertoast.showToast(
-            msg: "✅ Storage system initialized successfully",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-          );
         } else {
           print('   - ❌ SharedPreferences test failed!');
-          
-          // Show visible error
-          Fluttertoast.showToast(
-            msg: "❌ Storage system initialization failed",
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-          );
         }
       } else {
         print('   - SharedPreferences already initialized');
@@ -130,8 +120,11 @@ class PresetService {
       final presetKey = 'simple_preset_${preset.name}';
       final presetData = '${preset.protocol}|${preset.ip}|${preset.resolution}|${DateTime.now().millisecondsSinceEpoch}';
       
+      print('   Preset key: $presetKey');
       print('   Saving preset data: $presetData');
-      await _prefs!.setString(presetKey, presetData);
+      
+      final saveResult = await _prefs!.setString(presetKey, presetData);
+      print('   Save result: $saveResult');
       
       // Verify it was saved
       final saved = _prefs!.getString(presetKey);
@@ -139,11 +132,18 @@ class PresetService {
       
       if (saved == presetData) {
         // Add to preset list
+        print('   Getting current preset list...');
         final presetList = _prefs!.getStringList('simple_preset_list') ?? [];
+        print('   Current preset list: $presetList');
+        
         if (!presetList.contains(preset.name)) {
+          print('   Preset "${preset.name}" not in list, adding...');
           presetList.insert(0, preset.name);
-          await _prefs!.setStringList('simple_preset_list', presetList);
+          final listSaveResult = await _prefs!.setStringList('simple_preset_list', presetList);
+          print('   List save result: $listSaveResult');
           print('   Added to preset list, total presets: ${presetList.length}');
+        } else {
+          print('   Preset "${preset.name}" already in list');
         }
         print('✅ SIMPLE preset saved successfully');
       } else {

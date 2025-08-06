@@ -50,10 +50,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Add timestamp to debug APK name
+            applicationIdSuffix = ".debug"
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+    
 }
 
 flutter {

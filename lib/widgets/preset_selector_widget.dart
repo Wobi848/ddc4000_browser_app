@@ -54,15 +54,6 @@ class _PresetSelectorWidgetState extends State<PresetSelectorWidget> {
       });
       
       print('   UI updated with ${_presets.length} presets');
-      
-      // Show a toast with preset count for visible feedback
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: "📋 Loaded ${presets.length} presets",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-        );
-      }
     } catch (e) {
       print('❌ Error loading presets: $e');
       setState(() {
@@ -70,14 +61,6 @@ class _PresetSelectorWidgetState extends State<PresetSelectorWidget> {
         _autoloadPreset = null;
         _isLoading = false;
       });
-      
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: "❌ Error loading presets: $e",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-        );
-      }
     }
   }
 

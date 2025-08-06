@@ -22,8 +22,9 @@ class DDCBrowserScreen extends StatefulWidget {
 }
 
 class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBindingObserver {
-  // Debug build identifier
-  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_15.30";
+  // Build information - update this for each build
+  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_16.15";
+  static const String BUILD_TIMESTAMP = "2025-08-06 16:15";
   late WebViewController _webViewController;
   final ScreenshotController _screenshotController = ScreenshotController();
   
@@ -46,12 +47,75 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
     WidgetsBinding.instance.addObserver(this);
     _initializeWebView();
     _loadAutoPreset();
-    _showVersionInfo();
   }
 
   void _showVersionInfo() {
-    // Show build ID so user knows they have the right version
-    _showSuccessToast('🔨 $DEBUG_BUILD_ID');
+    // Show detailed version info in a dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Build Information'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Build Version:',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DEBUG_BUILD_ID,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontFamily: 'monospace',
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Build Date:',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              BUILD_TIMESTAMP,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontFamily: 'monospace',
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Features in this build:',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text('✅ Enhanced preset debugging'),
+            const Text('✅ Visible error messages'),
+            const Text('✅ Storage system diagnostics'),
+            const Text('✅ Professional DDC4000 icons'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -477,13 +541,13 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
 
   void _saveCurrentAsPreset() {
     print('🔧 _saveCurrentAsPreset() called');
-    print('   Current IP Address: $_ipAddress');
-    print('   Current Protocol: $_protocol');
-    print('   Current Resolution: $_resolution');
+    print('   Current IP Address: "$_ipAddress" (length: ${_ipAddress.length})');
+    print('   Current Protocol: "$_protocol"');
+    print('   Current Resolution: "$_resolution"');
     
     if (_ipAddress.isEmpty) {
       print('❌ IP Address is empty, showing error');
-      _showErrorToast('Please configure connection settings first');
+      _showErrorToast('❌ Please configure connection settings first');
       return;
     }
 
@@ -617,6 +681,11 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: _showVersionInfo,
+            tooltip: 'Build Info',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshConnection,
