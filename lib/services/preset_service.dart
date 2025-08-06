@@ -40,7 +40,7 @@ class PresetService {
         print('   - Test preset data: $testPreset');
         print('   - Test preset list: $testList');
         
-        if (testValue == 'test_value' && testPreset != null) {
+        if (testValue == 'test_value' && testPreset != null && testList != null) {
           print('   - ✅ SharedPreferences is working correctly');
         } else {
           print('   - ❌ SharedPreferences test failed!');

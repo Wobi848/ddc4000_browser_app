@@ -23,8 +23,8 @@ class DDCBrowserScreen extends StatefulWidget {
 
 class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBindingObserver {
   // Build information - update this for each build
-  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_16.15";
-  static const String BUILD_TIMESTAMP = "2025-08-06 16:15";
+  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_16.35";
+  static const String BUILD_TIMESTAMP = "2025-08-06 16:35";
   late WebViewController _webViewController;
   final ScreenshotController _screenshotController = ScreenshotController();
   
@@ -539,11 +539,20 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
     );
   }
 
-  void _saveCurrentAsPreset() {
+  void _saveCurrentAsPreset() async {
     print('🔧 _saveCurrentAsPreset() called');
+    
+    // ALWAYS show this toast first to confirm function is called
+    _showSuccessToast('🔧 Save function called! Checking settings...');
+    await Future.delayed(const Duration(milliseconds: 1000));
+    
     print('   Current IP Address: "$_ipAddress" (length: ${_ipAddress.length})');
     print('   Current Protocol: "$_protocol"');
     print('   Current Resolution: "$_resolution"');
+    
+    // Show current state on screen
+    _showSuccessToast('📋 Current: $_protocol://$_ipAddress ($_resolution)');
+    await Future.delayed(const Duration(milliseconds: 1000));
     
     if (_ipAddress.isEmpty) {
       print('❌ IP Address is empty, showing error');
@@ -552,6 +561,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
     }
 
     print('✅ IP Address is valid, showing save dialog');
+    _showSuccessToast('✅ IP valid, opening save dialog...');
     _showSavePresetDialog();
   }
 
@@ -590,13 +600,17 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
               final name = nameController.text.trim();
               if (name.isNotEmpty) {
                 try {
-                  // Show loading indicator
-                  _showSuccessToast('Saving preset "$name"...');
+                  // Show detailed current state
+                  _showSuccessToast('📝 Attempting to save "$name"...');
+                  await Future.delayed(const Duration(milliseconds: 500));
                   
                   print('🔄 Saving preset: $name');
                   print('   Protocol: $_protocol');
                   print('   IP: $_ipAddress');
                   print('   Resolution: $_resolution');
+                  
+                  // Show current settings on screen
+                  _showSuccessToast('📋 Settings: $_protocol://$_ipAddress ($_resolution)');
                   
                   final preset = DDCPreset(
                     name: name,

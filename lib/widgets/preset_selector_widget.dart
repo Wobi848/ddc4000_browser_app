@@ -35,9 +35,28 @@ class _PresetSelectorWidgetState extends State<PresetSelectorWidget> {
     setState(() => _isLoading = true);
     
     try {
+      // Show loading message on screen
+      Fluttertoast.showToast(
+        msg: "🔄 Loading presets...",
+        toastLength: Toast.LENGTH_SHORT,
+      );
+      
       print('   Calling PresetService.getAllPresets()...');
       final presets = await PresetService.instance.getAllPresets();
       print('   Received ${presets.length} presets from service');
+      
+      // Show detailed preset info on screen
+      if (presets.isEmpty) {
+        Fluttertoast.showToast(
+          msg: "❌ No presets found in storage",
+          toastLength: Toast.LENGTH_LONG,
+        );
+      } else {
+        Fluttertoast.showToast(
+          msg: "✅ Found ${presets.length} presets: ${presets.map((p) => p.name).join(', ')}",
+          toastLength: Toast.LENGTH_LONG,
+        );
+      }
       
       for (int i = 0; i < presets.length; i++) {
         print('   Preset $i: ${presets[i].name} (${presets[i].protocol}://${presets[i].ip})');
@@ -56,6 +75,13 @@ class _PresetSelectorWidgetState extends State<PresetSelectorWidget> {
       print('   UI updated with ${_presets.length} presets');
     } catch (e) {
       print('❌ Error loading presets: $e');
+      
+      // Show error on screen
+      Fluttertoast.showToast(
+        msg: "❌ Error loading presets: $e",
+        toastLength: Toast.LENGTH_LONG,
+      );
+      
       setState(() {
         _presets = [];
         _autoloadPreset = null;
