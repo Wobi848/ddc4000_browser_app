@@ -3,3 +3,6 @@ Final URL with timestamp: http://192.168.10.21/ddcdialog.html?useOvl=1&busyReloa
 
 
 http://192.168.10.21/ddcdialog.html?useOvl=1&busyReload=1&type=WVGA&_t=1754412848597
+
+
+flutter run -d P7LFBAFUEIAMW8FY

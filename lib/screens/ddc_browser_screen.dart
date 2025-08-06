@@ -24,8 +24,8 @@ class DDCBrowserScreen extends StatefulWidget {
 
 class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBindingObserver {
   // Build information - update this for each build  
-  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_17.40";
-  static const String BUILD_TIMESTAMP = "2025-08-06 17:40";
+  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_17.52";
+  static const String BUILD_TIMESTAMP = "2025-08-06 17:52";
   late WebViewController _webViewController;
   final ScreenshotController _screenshotController = ScreenshotController();
   
@@ -682,24 +682,17 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
       },
       child: Scaffold(
       appBar: _isFullscreen ? null : AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.home_work, size: 24),
-            SizedBox(width: 8),
-            Text('DDC4000 Browser'),
+            GestureDetector(
+              onTap: _showVersionInfo,
+              child: const Icon(Icons.home_work, size: 24),
+            ),
+            const SizedBox(width: 8),
+            const Text('DDC4000 Browser'),
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
-            onPressed: _toggleFullscreen,
-            tooltip: _isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen',
-          ),
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: _showVersionInfo,
-            tooltip: 'Build Info',
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshConnection,
@@ -736,16 +729,9 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      _statusMessage,
+                      _ipAddress.isNotEmpty ? _ipAddress : _statusMessage,
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                     ),
-                    const Spacer(),
-                    if (_ipAddress.isNotEmpty) ...[
-                      Text(
-                        '$_protocol://$_ipAddress ($_resolution)',
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ],
                   ],
                 ),
               ),
