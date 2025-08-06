@@ -22,6 +22,8 @@ class DDCBrowserScreen extends StatefulWidget {
 }
 
 class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBindingObserver {
+  // Debug build identifier
+  static const String DEBUG_BUILD_ID = "DEBUG_v2025.08.06_15.30";
   late WebViewController _webViewController;
   final ScreenshotController _screenshotController = ScreenshotController();
   
@@ -44,6 +46,12 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
     WidgetsBinding.instance.addObserver(this);
     _initializeWebView();
     _loadAutoPreset();
+    _showVersionInfo();
+  }
+
+  void _showVersionInfo() {
+    // Show build ID so user knows they have the right version
+    _showSuccessToast('🔨 $DEBUG_BUILD_ID');
   }
 
   @override
@@ -414,6 +422,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   }
 
   void _showPresetSelector() {
+    print('🔧 _showPresetSelector() called - Opening preset dialog');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -452,6 +461,7 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                     bottom: MediaQuery.of(context).padding.bottom + 16,
                   ),
                   child: PresetSelectorWidget(
+                    key: ValueKey(DateTime.now().millisecondsSinceEpoch),
                     currentPreset: _currentPreset,
                     onPresetSelected: _loadPreset,
                     onSavePreset: () => _saveCurrentAsPreset(),
@@ -466,11 +476,18 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
   }
 
   void _saveCurrentAsPreset() {
+    print('🔧 _saveCurrentAsPreset() called');
+    print('   Current IP Address: $_ipAddress');
+    print('   Current Protocol: $_protocol');
+    print('   Current Resolution: $_resolution');
+    
     if (_ipAddress.isEmpty) {
+      print('❌ IP Address is empty, showing error');
       _showErrorToast('Please configure connection settings first');
       return;
     }
 
+    print('✅ IP Address is valid, showing save dialog');
     _showSavePresetDialog();
   }
 
@@ -509,6 +526,9 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
               final name = nameController.text.trim();
               if (name.isNotEmpty) {
                 try {
+                  // Show loading indicator
+                  _showSuccessToast('Saving preset "$name"...');
+                  
                   print('🔄 Saving preset: $name');
                   print('   Protocol: $_protocol');
                   print('   IP: $_ipAddress');
@@ -524,14 +544,27 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
                   
                   await PresetService.instance.savePreset(preset);
                   print('✅ Preset saved successfully: $name');
-                  _showSuccessToast('Preset "$name" saved successfully');
+                  
+                  // Verify the preset was actually saved
+                  print('🔍 Verifying preset was saved...');
+                  final allPresets = await PresetService.instance.getAllPresets();
+                  print('   Total presets after save: ${allPresets.length}');
+                  
+                  if (allPresets.any((p) => p.name == name)) {
+                    _showSuccessToast('✅ Preset "$name" saved! Total: ${allPresets.length}');
+                    for (var p in allPresets) {
+                      print('   - ${p.name}: ${p.protocol}://${p.ip}');
+                    }
+                  } else {
+                    _showErrorToast('❌ Preset saved but not found in list!');
+                  }
                   
                   if (mounted) {
                     Navigator.of(context).pop();
                   }
                 } catch (e) {
                   print('❌ Error saving preset: $e');
-                  _showErrorToast('Failed to save preset: ${e.toString()}');
+                  _showErrorToast('❌ Failed to save preset: ${e.toString()}');
                 }
               } else {
                 _showErrorToast('Please enter a preset name');
@@ -795,6 +828,15 @@ class _DDCBrowserScreenState extends State<DDCBrowserScreen> with WidgetsBinding
               'Professional building automation interface browser',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              DEBUG_BUILD_ID,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[400],
+                fontFamily: 'monospace',
               ),
               textAlign: TextAlign.center,
             ),

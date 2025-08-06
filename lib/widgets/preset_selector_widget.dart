@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../models/ddc_preset.dart';
 import '../services/preset_service.dart';
 
@@ -30,16 +31,54 @@ class _PresetSelectorWidgetState extends State<PresetSelectorWidget> {
   }
 
   Future<void> _loadPresets() async {
+    print('🔧 PresetSelectorWidget._loadPresets() called');
     setState(() => _isLoading = true);
     
-    final presets = await PresetService.instance.getAllPresets();
-    final autoload = await PresetService.instance.getAutoloadPreset();
-    
-    setState(() {
-      _presets = presets;
-      _autoloadPreset = autoload;
-      _isLoading = false;
-    });
+    try {
+      print('   Calling PresetService.getAllPresets()...');
+      final presets = await PresetService.instance.getAllPresets();
+      print('   Received ${presets.length} presets from service');
+      
+      for (int i = 0; i < presets.length; i++) {
+        print('   Preset $i: ${presets[i].name} (${presets[i].protocol}://${presets[i].ip})');
+      }
+      
+      print('   Getting autoload preset...');
+      final autoload = await PresetService.instance.getAutoloadPreset();
+      print('   Autoload preset: $autoload');
+      
+      setState(() {
+        _presets = presets;
+        _autoloadPreset = autoload;
+        _isLoading = false;
+      });
+      
+      print('   UI updated with ${_presets.length} presets');
+      
+      // Show a toast with preset count for visible feedback
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: "📋 Loaded ${presets.length} presets",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    } catch (e) {
+      print('❌ Error loading presets: $e');
+      setState(() {
+        _presets = [];
+        _autoloadPreset = null;
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: "❌ Error loading presets: $e",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    }
   }
 
   Future<void> _setAutoloadPreset(String? presetName) async {

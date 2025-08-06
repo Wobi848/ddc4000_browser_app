@@ -15,7 +15,8 @@
       "Bash(do)",
       "Bash(done)",
       "Bash(mkdir:*)",
-      "Bash(keytool:*)"
+      "Bash(keytool:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

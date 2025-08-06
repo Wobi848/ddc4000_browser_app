@@ -108,3 +108,9 @@ key.properties
 SECURITY_BACKUP_INFO.txt
 *BACKUP_INFO*
 *PASSWORD*
+
+# Local build scripts with passwords (NEVER COMMIT!)
+build_release_local.bat
+*_local.bat
+*build_release*
+build_*.bat

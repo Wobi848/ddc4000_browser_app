@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../models/ddc_preset.dart';
 
 class PresetService {
@@ -26,10 +27,33 @@ class PresetService {
         final testValue = _prefs!.getString('test_key');
         print('   - Test write/read result: $testValue');
         
-        if (testValue == 'test_value') {
+        // Test simple preset functionality
+        print('   - Testing simple preset storage...');
+        await _prefs!.setString('simple_preset_TEST', 'http|192.168.1.1|WVGA|123456789');
+        await _prefs!.setStringList('simple_preset_list', ['TEST']);
+        final testPreset = _prefs!.getString('simple_preset_TEST');
+        final testList = _prefs!.getStringList('simple_preset_list');
+        print('   - Test preset data: $testPreset');
+        print('   - Test preset list: $testList');
+        
+        if (testValue == 'test_value' && testPreset != null && testList != null) {
           print('   - ✅ SharedPreferences is working correctly');
+          
+          // Show visible confirmation
+          Fluttertoast.showToast(
+            msg: "✅ Storage system initialized successfully",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
         } else {
           print('   - ❌ SharedPreferences test failed!');
+          
+          // Show visible error
+          Fluttertoast.showToast(
+            msg: "❌ Storage system initialization failed",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+          );
         }
       } else {
         print('   - SharedPreferences already initialized');

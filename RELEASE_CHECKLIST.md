@@ -47,17 +47,31 @@
 ## 🚀 **Release Process**
 
 ### **1. Final Build**
+
+**IMPORTANT:** Use the secure build process to protect passwords!
+
+**Option A: Local Build Script (Recommended)**
 ```bash
-cd "C:\Coding\ddc4000_browser_app"
-flutter clean
-flutter pub get
-flutter build apk --release
+# Create and run build_release_local.bat (see BUILD_RELEASE_INSTRUCTIONS.md)
+build_release_local.bat
 ```
 
-### **2. APK Signing (If Required)**
-- Generate or use existing keystore
-- Sign the release APK for distribution
-- Verify APK signature
+**Option B: Manual Build**
+```bash
+# 1. Edit android/key.properties with real passwords
+# 2. Run build commands:
+cd "C:\Coding\ddc4000_browser_app"
+flutter clean
+flutter pub get  
+flutter build apk --release
+# 3. IMMEDIATELY change passwords back to placeholders!
+```
+
+### **2. APK Signing**
+- ✅ Keystore configured (`upload-keystore.jks`)
+- ✅ Signing configuration in build.gradle.kts
+- ✅ Passwords managed securely (not in git)
+- ✅ APK automatically signed during build
 
 ### **3. Testing on Target Devices**
 - ✅ Test on development device (completed)

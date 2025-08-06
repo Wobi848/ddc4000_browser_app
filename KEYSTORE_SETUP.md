@@ -50,13 +50,63 @@ storeFile=../upload-keystore.jks
 
 ## 🚀 **Build Release APK**
 
-Once keystore is configured:
+### **Option 1: Manual Build (Secure)**
+1. Edit `android/key.properties` with real passwords:
+```properties
+storePassword=DDC4000Store
+keyPassword=DDC4000Store
+keyAlias=upload
+storeFile=C:/Coding/ddc4000_browser_app/upload-keystore.jks
+```
 
+2. Build the APK:
 ```bash
 flutter clean
 flutter pub get
 flutter build apk --release
 ```
+
+3. **IMMEDIATELY** change passwords back to placeholders:
+```properties
+storePassword=CHANGE_THIS_PASSWORD
+keyPassword=CHANGE_THIS_PASSWORD
+keyAlias=upload
+storeFile=C:/Coding/ddc4000_browser_app/upload-keystore.jks
+```
+
+### **Option 2: Local Build Script (Recommended)**
+Create `build_release_local.bat` in project root (NOT committed to git):
+
+```batch
+@echo off
+echo Building DDC4000 Browser Release APK...
+echo.
+
+REM Set real passwords temporarily
+echo storePassword=DDC4000Store > android\key.properties
+echo keyPassword=DDC4000Store >> android\key.properties  
+echo keyAlias=upload >> android\key.properties
+echo storeFile=C:/Coding/ddc4000_browser_app/upload-keystore.jks >> android\key.properties
+
+REM Clean and build
+flutter clean
+flutter pub get
+flutter build apk --release
+
+REM Restore placeholder passwords for security
+echo storePassword=CHANGE_THIS_PASSWORD > android\key.properties
+echo keyPassword=CHANGE_THIS_PASSWORD >> android\key.properties
+echo keyAlias=upload >> android\key.properties
+echo storeFile=C:/Coding/ddc4000_browser_app/upload-keystore.jks >> android\key.properties
+
+echo.
+echo ✅ Release APK built successfully!
+echo 📁 Location: build\app\outputs\flutter-apk\app-release.apk
+echo 🔒 Passwords secured automatically
+pause
+```
+
+**Usage:** Double-click `build_release_local.bat` to build
 
 The signed APK will be in: `build/app/outputs/flutter-apk/app-release.apk`
 
