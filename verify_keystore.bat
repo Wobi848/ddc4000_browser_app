@@ -13,7 +13,16 @@ echo.
 echo Testing keystore password...
 echo.
 
-keytool -list -keystore upload-keystore.jks -storepass "%TEST_PASSWORD%" -alias upload
+echo Testing store password first...
+"C:\Program Files\Android\Android Studio1\jbr\bin\keytool.exe" -list -keystore upload-keystore.jks -storepass "%TEST_PASSWORD%"
+
+echo.
+echo Testing with specific alias 'upload'...
+"C:\Program Files\Android\Android Studio1\jbr\bin\keytool.exe" -list -keystore upload-keystore.jks -storepass "%TEST_PASSWORD%" -alias upload
+
+echo.
+echo Testing both store and key password...
+"C:\Program Files\Android\Android Studio1\jbr\bin\keytool.exe" -list -keystore upload-keystore.jks -storepass "%TEST_PASSWORD%" -keypass "%TEST_PASSWORD%" -alias upload
 
 if %ERRORLEVEL% EQU 0 (
     echo.

@@ -1,0 +1,4 @@
+storePassword=DDC4000Store 
+keyPassword=DDC4000Store 
+keyAlias=upload 
+storeFile=C:/Coding/ddc4000_browser_app/upload-keystore.jks 

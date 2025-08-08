@@ -17,7 +17,15 @@
       "Bash(mkdir:*)",
       "Bash(keytool:*)",
       "Bash(grep:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dir \"C:\\Coding\\ddc4000_browser_app\\upload-keystore.jks\")",
+      "Bash(cat:*)",
+      "Bash(./diagnose_keystore.bat)",
+      "Bash(git check-ignore:*)",
+      "Bash(\"C:\\Program Files\\Android\\Android Studio1\\jbr\\bin\\keytool.exe\" -list -keystore upload-keystore.jks -storepass DDC4000Store -alias upload -v)",
+      "Bash(\"C:\\Program Files\\Android\\Android Studio1\\jbr\\bin\\keytool.exe\" -list -keystore upload-keystore.jks -storepass DDC4000Store -keypass DDC4000Store -alias upload)",
+      "Bash(./test_key_passwords.bat)",
+      "Bash(.build_release_template.bat)"
     ],
     "deny": []
   }
